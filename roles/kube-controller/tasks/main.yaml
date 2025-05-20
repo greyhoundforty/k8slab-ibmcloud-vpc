@@ -1,0 +1,49 @@
+--- 
+  # sudo kubeadm init --pod-network-cidr=172.16.0.0/16 --v=5
+- name: Check if kubeadm is initialized
+  ansible.builtin.command: kubectl cluster-info
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: kubernetes_status
+  ignore_errors: true
+  changed_when: false
+- name: Initialize kubeadm
+  ansible.builtin.command: kubeadm init --pod-network-cidr=172.16.0.0/16 --v=5
+  when: kubernetes_status.rc != 0
+  changed_when: kubernetes_status.rc != 0
+# # mkdir -p $HOME/.kube
+- name: Generate the kubeadm join command
+  ansible.builtin.command: kubeadm token create --print-join-command
+  register: join_command
+  changed_when: false
+- name: Store the join command
+  ansible.builtin.set_fact:
+    kubeadm_join_cmd: "{{ join_command.stdout }}"
+
+- name: Copy kubeconfig to $USER
+  ansible.builtin.fetch:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ playbook_dir }}/"
+    flat: true
+# kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml # probably another mirrored file
+- name: Download calico mainifest
+  ansible.builtin.get_url:
+    url: https://docs.projectcalico.org/manifests/calico.yaml
+    # url: ansbl.jbernh.xyz/srv/calico.yaml
+    dest: /tmp/calico.yaml
+    mode: '0755'
+- name: Apply calico
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  ansible.builtin.command: kubectl apply -f /tmp/calico.yaml
+  register: calico_apply_result
+  changed_when: "'configured' in calico_apply_result.stdout or 'created' in calico_apply_result.stdout"
+- name: Wait for calico to be ready
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  ansible.builtin.command: kubectl get pods -n kube-system -l k8s-app=calico-node -o jsonpath='{.items[0].status.containerStatuses[0].ready}'
+  register: calico_status
+  until: calico_status.stdout == "true"
+  retries: 10
+  delay: 5
+  changed_when: false
