@@ -1,0 +1,20 @@
+---
+- name: 'Update all deployed systems'
+  hosts: all
+  tasks:
+    - name: Update system packages on RPM based systems 
+      ansible.builtin.yum: name=* state=latest
+      register: yum_status
+      until: yum_status is success
+      delay: 30
+      retries: 10
+      when: ansible_facts['os_family'] == "RedHat"    
+    - name: Update system packages on DEB based systems
+      ansible.builtin.apt: 
+        upgrade=yes 
+        update_cache=yes
+      register: apt_status
+      until: apt_status is success
+      delay: 30
+      retries: 10
+      when: ansible_facts['os_family'] == "Debian" 

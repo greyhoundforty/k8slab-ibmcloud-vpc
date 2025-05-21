@@ -1,4 +1,9 @@
+## Vscode
 .vscode/
+
+## Ansible
+modules/ansible/admin.conf
+modules/ansible/*.ini
 
 ###---------------------###
 ###  GitHub: Terraform  ###
