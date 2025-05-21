@@ -31,7 +31,6 @@ variable "owner" {
 variable "existing_ssh_key" {
   description = "Name of an existing SSH key to use for the VPC. If not set, a new SSH key will be created."
   type        = string
-  default     = ""
 }
 
 variable "controller_node_count" {

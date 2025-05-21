@@ -18,7 +18,7 @@ module "bastion" {
   resource_group_id = module.resource_group.resource_group_id
   vpc_id            = ibm_is_vpc.vpc.id
   subnet_id         = ibm_is_subnet.dmz.id
-  security_group_id = module.bastion_security_group.security_group_id[0]
+  security_group_id = module.dmz_security_group.security_group_id
   zone              = local.vpc_zones[0].zone
   ssh_key_ids       = [data.ibm_is_ssh_key.sshkey.id]
   tags              = local.tags
@@ -38,7 +38,7 @@ module "control_plane" {
   resource_group_id = module.resource_group.resource_group_id
   vpc_id            = ibm_is_vpc.vpc.id
   subnet_id         = ibm_is_subnet.controller.id
-  security_group_id = module.control_plane_security_group.security_group_id[0]
+  security_group_id = module.control_plane_security_group.security_group_id
   zone              = local.vpc_zones[0].zone
   ssh_key_ids       = [data.ibm_is_ssh_key.sshkey.id]
   tags              = local.tags
@@ -51,8 +51,16 @@ module "worker_node" {
   resource_group_id = module.resource_group.resource_group_id
   vpc_id            = ibm_is_vpc.vpc.id
   subnet_id         = ibm_is_subnet.worker.id
-  security_group_id = module.worker_security_group.security_group_id[0]
+  security_group_id = module.worker_security_group.security_group_id
   zone              = local.vpc_zones[0].zone
   ssh_key_ids       = [data.ibm_is_ssh_key.sshkey.id]
   tags              = local.tags
+}
+
+module "ansible" {
+  source            = "./modules/ansible"
+  bastion_public_ip = ibm_is_floating_ip.bastion.address
+  controllers       = module.control_plane[*].instance[0]
+  workers           = module.worker_node[*].instance[0]
+  region            = var.region
 }

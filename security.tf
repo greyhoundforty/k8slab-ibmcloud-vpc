@@ -1,6 +1,6 @@
 module "dmz_security_group" {
   source                       = "terraform-ibm-modules/security-group/ibm"
-  version                      = "2.5.0"
+  version                      = "2.7.0"
   add_ibm_cloud_internal_rules = true
   vpc_id                       = ibm_is_vpc.vpc.id
   resource_group               = module.resource_group.resource_group_id
@@ -34,7 +34,7 @@ module "dmz_security_group" {
 
 module "control_plane_security_group" {
   source                       = "terraform-ibm-modules/security-group/ibm"
-  version                      = "2.5.0"
+  version                      = "2.7.0"
   add_ibm_cloud_internal_rules = true
   vpc_id                       = ibm_is_vpc.vpc.id
   resource_group               = module.resource_group.resource_group_id
@@ -94,7 +94,7 @@ module "control_plane_security_group" {
     {
       name      = "ssh-from-bastion"
       direction = "inbound"
-      remote    = module.bastion_security_group.security_group_id
+      remote    = module.dmz_security_group.security_group_id
       tcp = {
         port_min = 22
         port_max = 22
@@ -111,7 +111,7 @@ module "control_plane_security_group" {
 
 module "worker_security_group" {
   source                       = "terraform-ibm-modules/security-group/ibm"
-  version                      = "2.5.0"
+  version                      = "2.7.0"
   add_ibm_cloud_internal_rules = true
   vpc_id                       = ibm_is_vpc.vpc.id
   resource_group               = module.resource_group.resource_group_id
@@ -171,7 +171,7 @@ module "worker_security_group" {
     {
       name      = "ssh-from-bastion"
       direction = "inbound"
-      remote    = module.bastion_security_group.security_group_id
+      remote    = module.dmz_security_group.security_group_id
       tcp = {
         port_min = 22
         port_max = 22

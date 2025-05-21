@@ -1,2 +1,45 @@
 [tools]
-terraform = "1.6.0"
+terraform = "1.9.0"
+
+[env]
+_.file = ".env.json"
+
+[tasks."terraform:init"]
+description = "Initializes a Terraform working directory"
+run = "terraform init"
+alias = "tfi"
+
+[tasks."terraform:plan"]
+description = "Generates an execution plan for Terraform"
+run = "terraform plan -out $(terraform workspace show).tfplan"
+alias = "tfp"
+
+[tasks."terraform:apply"]
+description = "Applies the changes required to reach the desired state of the configuration"
+run = "terraform apply $(terraform workspace show).tfplan"
+alias = "tfa"
+
+[tasks."terraform:destroy"]
+description = "Destroy Terraform-managed infrastructure"
+run = "terraform destroy"
+alias = "tfd"
+
+[tasks."terraform:validate"]
+description = "Validates the Terraform files"
+run = "terraform validate"
+alias = "tfv"
+
+[tasks."terraform:format"]
+description = "Formats the Terraform files"
+run = "terraform fmt"
+alias = "tfm"
+
+[tasks."terraform:check"]
+description = "Formats and validates the Terraform files"
+depends = ["terraform:format", "terraform:validate"]
+alias = "tfc"
+
+[tasks."terraform:reset"]
+description = "Removes terraform init directories and statefiles and resets directory"
+run = "rm -rf .terraform terraform.tfstate.d *.tfplan"
+alias = "tfr"

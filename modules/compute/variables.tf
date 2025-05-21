@@ -1,14 +1,14 @@
 ## Variables with default values
 variable "instance_profile" {
-  description = "The profile to use for the bastion host."
+  description = "The profile to use for the compute hosts."
   type        = string
-  default     = "cx2-2x4"
+  default     = "cx3d-4x10"
 }
 
 variable "image_name" {
-  description = "The name of the image to use for the bastion host."
+  description = "The name of the image to use for the compute hosts."
   type        = string
-  default     = "ibm-ubuntu-22-04-2-minimal-amd64-1"
+  default     = "ibm-ubuntu-24-04-2-minimal-amd64-1"
 }
 
 variable "metadata_service_enabled" {
