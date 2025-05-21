@@ -14,8 +14,14 @@
   roles:
     - common
 
+- name: Configure bastion host
+  hosts: bastion
+  become: true
+  roles:
+    - bastion
+
 - name: Apply kubernetes configuration
-  hosts: all
+  hosts: all:!bastion
   become: true
   roles:
     - kube-base
@@ -26,8 +32,8 @@
   roles:
     - kube-controller
 
-# - name: Worker init
-#   hosts: workers
-#   become: true
-#   roles:
-#     - kube-worker
+- name: Worker init
+  hosts: workers
+  become: true
+  roles:
+    - kube-worker

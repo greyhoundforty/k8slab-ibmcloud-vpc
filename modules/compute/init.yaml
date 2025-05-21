@@ -20,12 +20,12 @@ snap:
 power_state:
   mode: reboot
   message: "Rebooting system after initial setup"
-  timeout: 180
+  timeout: 60
   condition: True
 
 # Add a message to system logs for verification
 runcmd:
-  - echo "System will reboot in 3 minutes after cloud-init completes" | tee -a /var/log/syslog
+  - echo "System will reboot in 1 minute after cloud-init completes" | tee -a /var/log/syslog
 
 final_message: "The system is finally up, after $UPTIME seconds"
 output: {all: '| tee -a /var/log/cloud-init-output.log'}

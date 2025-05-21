@@ -1,0 +1,35 @@
+--- 
+# Check if node is already joined to the cluster
+- name: Check if node is already joined
+  ansible.builtin.command: kubectl get nodes
+  environment:
+    KUBECONFIG: /etc/kubernetes/kubelet.conf
+  register: node_check
+  ignore_errors: true
+  changed_when: false
+
+# Get the join command from the hostvars
+- name: Get join command from controller
+  ansible.builtin.set_fact:
+    join_command: "{{ hostvars[groups['controllers'][0]]['kubeadm_join_cmd'] }}"
+  when: node_check.rc != 0
+
+# Join the node to the cluster if not already joined
+- name: Join node to cluster
+  ansible.builtin.command: "{{ join_command }}"
+  when: node_check.rc != 0
+  register: node_joined
+  changed_when: node_joined is changed
+
+# Wait for node to be ready
+- name: Wait for node to be in Ready state
+  ansible.builtin.command: kubectl get node {{ ansible_hostname }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+  environment:
+    KUBECONFIG: /etc/kubernetes/kubelet.conf
+  register: node_ready
+  until: node_ready.stdout == "True"
+  retries: 10
+  delay: 10
+  ignore_errors: true
+  changed_when: false
+  when: node_check.rc != 0

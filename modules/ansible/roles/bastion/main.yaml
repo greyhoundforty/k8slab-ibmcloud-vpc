@@ -1,0 +1,137 @@
+---
+# Check if Kubernetes repo is already added
+- name: Check if Kubernetes repo exists
+  ansible.builtin.stat:
+    path: /etc/apt/sources.list.d/kubernetes.list
+  register: kubernetes_repo
+
+# Add Kubernetes repo if not already added
+- name: Add Kubernetes APT repository
+  ansible.builtin.deb822_repository:
+    name: kubernetes
+    types: [deb]
+    uris: "https://pkgs.k8s.io/core:/stable:/v1.32/deb/"
+    signed_by: "https://pkgs.k8s.io/core:/stable:/v1.32/deb/Release.key"
+    suites: [/]
+    state: present
+    enabled: true
+  when: not kubernetes_repo.stat.exists
+  register: kubernetes_repo_added
+  changed_when: kubernetes_repo_added is changed
+
+# Update apt cache after adding repo
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+  when: kubernetes_repo_added is changed
+  changed_when: false
+
+# Check if kubectl is installed
+- name: Check if kubectl is installed
+  ansible.builtin.command: kubectl version --client
+  register: kubectl_check
+  ignore_errors: true
+  changed_when: false
+
+# Install kubectl if not already installed
+- name: Install kubectl
+  ansible.builtin.apt:
+    pkg:
+      - kubectl=1.32.2-1.1
+    state: present
+  when: kubectl_check.rc != 0
+  register: kubectl_installed
+  changed_when: kubectl_installed is changed
+
+# Ensure .kube directory exists
+- name: Ensure .kube directory exists
+  ansible.builtin.file:
+    path: /root/.kube
+    state: directory
+    mode: '0700'
+  register: kube_dir
+  changed_when: kube_dir is changed
+
+# Set up kubeconfig environment variable in .bashrc
+- name: Check if KUBECONFIG is already in .bashrc
+  ansible.builtin.command: grep -q "KUBECONFIG=/root/.kube/config" /root/.bashrc
+  register: kubeconfig_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Add KUBECONFIG to .bashrc
+  ansible.builtin.lineinfile:
+    path: /root/.bashrc
+    line: 'export KUBECONFIG=/root/.kube/config'
+    state: present
+  when: kubeconfig_check.rc != 0
+  register: kubeconfig_added
+  changed_when: kubeconfig_added is changed
+
+# Create kubectl symlink for all users
+- name: Check for existing kubectl in /usr/local/bin
+  ansible.builtin.stat:
+    path: /usr/local/bin/kubectl
+  register: kubectl_symlink
+
+- name: Ensure kubectl is available to all users
+  ansible.builtin.file:
+    src: /usr/bin/kubectl
+    dest: /usr/local/bin/kubectl
+    state: link
+  when: not kubectl_symlink.stat.exists
+  register: kubectl_linked
+  changed_when: kubectl_linked is changed
+
+# Install kubectl bash completion
+- name: Check if kubectl bash completion is installed
+  ansible.builtin.stat:
+    path: /etc/bash_completion.d/kubectl
+  register: kubectl_completion
+
+- name: Install kubectl bash completion
+  ansible.builtin.shell: kubectl completion bash > /etc/bash_completion.d/kubectl
+  when: not kubectl_completion.stat.exists
+  register: completion_installed
+  changed_when: completion_installed is changed
+
+# Add kubectl completion to .bashrc
+- name: Check if kubectl completion is in .bashrc
+  ansible.builtin.command: grep -q "source /etc/bash_completion.d/kubectl" /root/.bashrc
+  register: completion_source_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Add kubectl completion sourcing to .bashrc
+  ansible.builtin.lineinfile:
+    path: /root/.bashrc
+    line: 'source /etc/bash_completion.d/kubectl'
+    state: present
+  when: completion_source_check.rc != 0
+  register: completion_source_added
+  changed_when: completion_source_added is changed
+
+# Add helpful kubectl aliases
+- name: Check if kubectl aliases exist
+  ansible.builtin.command: grep -q "alias k=kubectl" /root/.bashrc
+  register: kubectl_alias_check
+  ignore_errors: true
+  changed_when: false
+
+- name: Add kubectl aliases to .bashrc
+  ansible.builtin.blockinfile:
+    path: /root/.bashrc
+    block: |
+      # Kubectl aliases
+      alias k=kubectl
+      alias kgp='kubectl get pods'
+      alias kgn='kubectl get nodes'
+      alias kgs='kubectl get svc'
+      alias kgd='kubectl get deployments'
+      alias kd='kubectl describe'
+      alias kl='kubectl logs'
+    state: present
+    marker: "# {mark} KUBECTL ALIASES"
+  when: kubectl_alias_check.rc != 0
+  register: kubectl_aliases_added
+  changed_when: kubectl_aliases_added is changed
